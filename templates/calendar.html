@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../../static/css/style.css">
+    <link rel="stylesheet" href="../../static/css/evo-calendar.midnight-blue.min.css">
+    <link rel="stylesheet" href="../../static/css/evo-calendar.min.css">
+
+</head>
+
+<body>
+    <div class="hero">
+        <div id="calendar"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
+    <script src="../../static/js/evo-calendar.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#calendar').evoCalendar({
+                theme: "Midnight Blue",
+                calendarEvents: [
+                    {% for event in calendar_events %}
+                {
+                    id: '{{ event.id | safe }}',
+                    name: '{{ event.name | safe }}',
+                    date: '{{ event.date | safe }}',
+                    description: '{{ event.description | safe }}',
+                    type: '{{ event.type | safe }}'
+                },
+                {% endfor %}
+            ]
+        })
+    })
+    </script>
+
+
+</body>
+
+</html>
