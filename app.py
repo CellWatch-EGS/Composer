@@ -2,7 +2,8 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for
 import json
 import requests
 import psycopg2
-
+from datetime import datetime
+import uuid
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = "super secret key"
@@ -13,6 +14,10 @@ DATABASE = "mydb"
 USER = "myuser"
 PASSWORD = "123"
 HOST = "localhost"
+
+TOKEN = "8ecadf46-9364-4e3a-b79d-182d6a259a75"
+headers = {"Authorization": f"Bearer {TOKEN}"}
+BASE_URL = "http://127.0.0.1:8000/v1"
 
 
 def connect_db():
@@ -29,88 +34,143 @@ def connect_db():
 # Rota para a página inicial
 @app.route("/")
 def index():
-    return redirect(url_for("calendar_page"))
-# <int:user_id>
-@app.route("/v1/calendar/user_id")
-def calendar_page():
-    # Estabelece a conexão com o banco de dados
-    conn = psycopg2.connect(dbname=DATABASE, user=USER, password=PASSWORD, host=HOST)
-    cursor = conn.cursor()
+    login_url = "http://127.0.0.1:8080/login"
+    return redirect(login_url)
 
-    # Executa a consulta para obter os eventos da base de dados
-    cursor.execute("SELECT id, name, date, description, type FROM calendars")
-
-    # Recupera os resultados da consulta
-    events_from_db = cursor.fetchall()
-
-    # Formata os eventos para o formato necessário pelo plugin do calendário
+@app.route("/v1/create_schedule", methods=["GET"])
+def create_schedule():
+    eventTime = request.args.get('time')
+    eventLocation = request.args.get('locationId')
+    eventPerson = request.args.get('person_name')
     calendar_events = []
-    for event in events_from_db:
-        print(event)
+    
+    a = test_create_schedule(eventTime, eventLocation, eventPerson)
+
+    data_parsed = datetime.strptime(a["time"], "%Y-%m-%dT%H:%M:%S")
+    data_formatada = data_parsed.strftime("%B/%d/%Y")
+    a["time"] = data_formatada
+
+    event_data = {
+        "id": a["id"],
+        "name": a["locationId"],
+        "date": a["time"],
+        "description": "Tarde",
+        "event": "event",
+    }
+    calendar_events.append(event_data)
+    return redirect(url_for('calendar_page'))
+
+# <int:user_id>
+@app.route("/v1/calendar/user_id", methods=["GET","POST"])
+def calendar_page():
+    calendar_events = []
+    a = test_get_schedules_by_person_name("jonas")
+
+    print(a)
+
+    for x in a:
+                
+        data_parsed = datetime.strptime(x["time"], "%Y-%m-%dT%H:%M:%S")
+        data_formatada = data_parsed.strftime("%B/%d/%Y")
+        x["time"] = data_formatada
+
         event_data = {
-            "id": event[0],
-            "name": event[1],
-            "date": event[2],
-            "description": event[3],
-            "type": event[4],
+            "id": x["id"],
+            "name": x["locationId"],
+            "date": x["time"],
+            "description": "Tarde",
+            "event": "event",
         }
         calendar_events.append(event_data)
 
-    # Renderiza o template HTML e passa os eventos como um argumento
     return render_template("calendar.html", calendar_events=calendar_events)
-    
+
+
+def test_get_schedules_by_person_name(person_name):
+    url = f"{BASE_URL}/schedules/{person_name}"
+    response = requests.get(url, headers=headers)
+    print("Get Schedule:", response.status_code, response.json())
+    assert response.status_code == 200, "Failed to get schedule"
+    return response.json()
+
+def test_create_schedule(time, locationId, person_name):
+    url = f"http://127.0.0.1:8000/schedules"
+    uid = str (uuid.uuid4())
+    schedule_data = {
+        "id": uid,
+        "time": time,
+        "locationId": locationId,
+        "person_name": person_name
+    }
+    response = requests.post(url, json=schedule_data, headers=headers)
+    assert response.status_code == 201, "Failed to create schedule"
+    return response.json()  # Returning the created schedule for further tests
+
+# adicionar description => tipo de shift
+# id passar a incrementar automaticamente para n ter q andar sempre a mudar. Se calhar para SERIAL PRIMARY KEY
+# def test_create_schedule():
+#     url = f"http://127.0.0.1:8000/schedules"
+#     # Use a unique identifier for testing, or clean up after tests
+#     schedule_data = {
+#         "id": "teste1",
+#         "time": "2024-04-02T08:00:00",
+#         "locationId": "Cozinha",
+#         "person_name": "jonas"
+#     }
+#     response = requests.post(url, json=schedule_data, headers=headers)
+#     # print("Create Schedule:", response.status_code, response.json())
+#     # print("Create Schedule Response Text:", response.text)
+#     assert response.status_code == 201, "Failed to create schedule"
+#     return response.json()  # Returning the created schedule for further tests
 
 
 # Rota para o login
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    user_id = 1
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
         print("username:", username)
         print("password:", password)
 
-        conn = psycopg2.connect(
+        connection = psycopg2.connect(
             dbname=DATABASE, user=USER, password=PASSWORD, host=HOST
         )
-        c = conn.cursor()
-        c.execute("SELECT id, password FROM users WHERE username=?", (username,))
-        user = c.fetchone()
-        conn.close()
-        print("user:", user)
 
-        if user is not None and password == user[1]:
-            user_id = user[0]
-            return redirect(url_for("welcome", user_id=user_id))
+        conn = connection.cursor()
 
-        error_message = "Credenciais inválidas. Por favor, tente novamente."
-        return render_template("login.html", error=error_message)
+        query = """SELECT * FROM calendars"""
+        conn.execute(query)
+        users = conn.fetchall()
+        access_token ='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcxMjc1NjU5OCwianRpIjoiZjZmMjdjMjctZjc4NC00NDliLTk4ODgtYjQ2MDM2ZjhkNjRiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6NywibmJmIjoxNzEyNzU2NTk4LCJleHAiOjE3MTI3NjAxOTh9.oPoBh9JJqRxjxxvMA-My5oYwBN-3s3kW2vaTKVAz6xU'
+        x = False
+        for row in users:
+            if row[1] == username:
+                x = True
+                break
+
+        if x == True:
+            print("epa n deve ser disto -> "+username)
+            # data = {"email": "user@example.com", "name": username, "password": password}
+            # Endpoint de signup do serviço de autenticação
+            login_url = "http://127.0.0.1:5000/login"
+            headers = {'Authorization': f'Bearer {access_token}'}
+            response = requests.post(login_url, headers=headers)
+            print("hey")
+            if response.status_code == 200:
+                getinfo_url = "http://127.0.0.1:5000/userinfo"
+                response = requests.post(getinfo_url, access_token)
+                return redirect(url_for("calendar_page", user_id=user_id))
+            else:
+                print("Erro ao fazer login:", response.text)
+                return render_template("login.html")
+
+        else:
+            error_message = "Credenciais inválidas. Por favor, tente novamente."
+            return render_template("login.html", error=error_message)
 
     return render_template("login.html")
-
-
-@app.route("/v1/schedule/<int:user_id>")
-def welcome(user_id):
-    # Consulta ao banco de dados para recuperar os horários do usuário
-    user_schedule = get_user_schedule(user_id)
-    schedule_json = json.dumps(user_schedule)
-    conn = psycopg2.connect(dbname=DATABASE, user=USER, password=PASSWORD, host=HOST)
-    c = conn.cursor()
-    c.execute("SELECT username FROM users WHERE id=?", (user_id,))
-    user = c.fetchone()
-    conn.close()
-    return render_template(
-        "welcome.html", username=user[0], schedule_json=schedule_json
-    )
-
-
-def get_user_schedule(user_id):
-    conn = psycopg2.connect(dbname=DATABASE, user=USER, password=PASSWORD, host=HOST)
-    c = conn.cursor()
-    c.execute("SELECT * FROM schedule WHERE id=?", (user_id,))
-    user_schedule = c.fetchall()
-    conn.close()
-    return user_schedule
 
 
 @app.route("/register")
@@ -120,6 +180,7 @@ def register_page():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    user_id = 1
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -139,49 +200,56 @@ def register():
             create_table_query = file.read()
         conn.execute(create_table_query)
 
-        query = """SELECT * FROM users"""
+        query = """SELECT * FROM calendars"""
         conn.execute(query)
-        print("Selecting rows from mobile table using cursor.fetchall")
         users = conn.fetchall()
 
-        print("Print each row and it's columns values")
         x = False
         for row in users:
             if row[1] == username:
                 x = True
                 break
-        print(x)
 
         if x == True:
             error = "Username already exists"
             print(error)
             return render_template("register.html", error=error)
         else:
-            postgres_insert_query = (
-                """ INSERT INTO users (username, password) VALUES (%s,%s)"""
-            )
-            record_to_insert = (username, password)
-            conn.execute(postgres_insert_query, record_to_insert)
-            connection.commit()
-            count = conn.rowcount
-            print(count, "Record inserted successfully into mobile table")
-            get_vnf_pkgs()
+            data = {"email": "user1@example.com", "name": username, "password": password}
+            # Endpoint de signup do serviço de autenticação
+            signup_url = "http://127.0.0.1:5000/signup"
 
-            # alterar isto para fazer o insert na outra bd (ainda n esta criada)
-            # alem disso tirar o render (linha 157) e deixar o redirect
+            # Realizar uma solicitação POST para o endpoint de signup
+            response = requests.post(signup_url, data=data)
+            # if response.status_code == 200:
+            if True:
+                print("Usuário registrado com sucesso!")
+                a = test_create_schedule()
+                postgres_insert_query = """ INSERT INTO calendars (username, password, date, location, shift, type) VALUES (%s,%s,%s,%s,%s,%s)"""
+                event = "event"
+                shift = "Noite"
+                record_to_insert = (
+                    username,
+                    password,
+                    a["time"],
+                    a["locationId"],
+                    shift,
+                    event,
+                )
+                conn.execute(postgres_insert_query, record_to_insert)
+                connection.commit()
+                count = conn.rowcount
+                # print(count, "Record inserted successfully into mobile table")
+                get_vnf_pkgs()
+                print("deu")
+                return redirect(url_for("calendar_page"))
+            else:
+                print("Erro ao registrar usuário:", response.text)
+                return render_template("register.html")
 
-            # password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-            # c.execute("SELECT id FROM users WHERE username=?", (username,))
-            # user_id = c.lastrowid
-            # c.execute(
-            #     "INSERT INTO schedule (id, guardID, time, locationID) VALUES (?, ?, ?, ?)",
-            #     (user_id, f"guard_{user_id}", "2002-01-10", "Dormir"),
-            # )
-        return render_template("register.html")
+        return redirect(url_for("calendar_page", user_id=user_id))
 
-        # return redirect(url_for("welcome", user_id=0))
-
-    return render_template("register.html")
+    return redirect(url_for("calendar_page"), user_id=user_id)
 
 
 @app.route("/api/v1/vnf_pkgs")
@@ -212,4 +280,6 @@ def get_vnf_pkgs():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    porta = 5000
+    # Execute o aplicativo Flask na porta especificada
+    app.run(debug=True, port=porta)
