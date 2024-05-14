@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask_jwt_extended import get_jwt_identity, jwt_required
 import json
 import requests
 import psycopg2
@@ -9,8 +10,16 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = "super secret key"
 app.config["SESSION_TYPE"] = "filesystem"
 
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_SECRET_KEY'] = "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"
 
-DATABASE = "mydb"
+app.config['JWT_COOKIE_CSRF_PROJECT'] = False
+app.config['JWT_ACCESS_COOKIE_NAME'] = ['access_token']
+app.config['JWT_ACCESS_CSRF_HEADER_NAME'] = 'Your_CSRF_Header_Name'
+app.config['JWT_ACCESS_CSRF_FIELD_NAME'] = 'Your_CSRF_Field_Name'
+
+
+DATABASE = "mydb" 
 USER = "myuser"
 PASSWORD = "123"
 HOST = "localhost"
@@ -34,7 +43,10 @@ def connect_db():
 # Rota para a página inicial
 @app.route("/")
 def index():
-    login_url = "http://127.0.0.1:8080/login"
+    login_url = "http://10.139.1.8:5000/login"
+    # login_url = "http://127.0.0.1:5000/v1/calendar/1"
+    # return redirect(url_for('calendar_page'))
+
     return redirect(login_url)
 
 @app.route("/v1/create_schedule", methods=["GET"])
@@ -61,14 +73,14 @@ def create_schedule():
     return redirect(url_for('calendar_page'))
 
 # <int:user_id>
-@app.route("/v1/calendar/user_id", methods=["GET","POST"])
+@app.route("/v1/calendar/<int:user_id>", methods=["GET", "POST"])
+@jwt_required()
 def calendar_page():
     calendar_events = []
     a = test_get_schedules_by_person_name("jonas")
-
     print(a)
 
-    for x in a:
+    for x in a: 
                 
         data_parsed = datetime.strptime(x["time"], "%Y-%m-%dT%H:%M:%S")
         data_formatada = data_parsed.strftime("%B/%d/%Y")
@@ -125,131 +137,131 @@ def test_create_schedule(time, locationId, person_name):
 
 
 # Rota para o login
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    user_id = 1
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        print("username:", username)
-        print("password:", password)
+# @app.route("/login", methods=["GET", "POST"])
+# def login():
+#     user_id = 1
+#     if request.method == "POST":
+#         username = request.form["username"]
+#         password = request.form["password"]
+#         print("username:", username)
+#         print("password:", password)
 
-        connection = psycopg2.connect(
-            dbname=DATABASE, user=USER, password=PASSWORD, host=HOST
-        )
+#         connection = psycopg2.connect(
+#             dbname=DATABASE, user=USER, password=PASSWORD, host=HOST
+#         )
 
-        conn = connection.cursor()
+#         conn = connection.cursor()
 
-        query = """SELECT * FROM calendars"""
-        conn.execute(query)
-        users = conn.fetchall()
-        access_token ='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcxMjc1NjU5OCwianRpIjoiZjZmMjdjMjctZjc4NC00NDliLTk4ODgtYjQ2MDM2ZjhkNjRiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6NywibmJmIjoxNzEyNzU2NTk4LCJleHAiOjE3MTI3NjAxOTh9.oPoBh9JJqRxjxxvMA-My5oYwBN-3s3kW2vaTKVAz6xU'
-        x = False
-        for row in users:
-            if row[1] == username:
-                x = True
-                break
+#         query = """SELECT * FROM calendars"""
+#         conn.execute(query)
+#         users = conn.fetchall()
+#         access_token ='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcxMjc1NjU5OCwianRpIjoiZjZmMjdjMjctZjc4NC00NDliLTk4ODgtYjQ2MDM2ZjhkNjRiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6NywibmJmIjoxNzEyNzU2NTk4LCJleHAiOjE3MTI3NjAxOTh9.oPoBh9JJqRxjxxvMA-My5oYwBN-3s3kW2vaTKVAz6xU'
+#         x = False
+#         for row in users:
+#             if row[1] == username:
+#                 x = True
+#                 break
 
-        if x == True:
-            print("epa n deve ser disto -> "+username)
-            # data = {"email": "user@example.com", "name": username, "password": password}
-            # Endpoint de signup do serviço de autenticação
-            login_url = "http://127.0.0.1:5000/login"
-            headers = {'Authorization': f'Bearer {access_token}'}
-            response = requests.post(login_url, headers=headers)
-            print("hey")
-            if response.status_code == 200:
-                getinfo_url = "http://127.0.0.1:5000/userinfo"
-                response = requests.post(getinfo_url, access_token)
-                return redirect(url_for("calendar_page", user_id=user_id))
-            else:
-                print("Erro ao fazer login:", response.text)
-                return render_template("login.html")
+#         if x == True:
+#             print("epa n deve ser disto -> "+username)
+#             # data = {"email": "user@example.com", "name": username, "password": password}
+#             # Endpoint de signup do serviço de autenticação
+#             login_url = "http://127.0.0.1:5000/login"
+#             headers = {'Authorization': f'Bearer {access_token}'}
+#             response = requests.post(login_url, headers=headers)
+#             print("hey")
+#             if response.status_code == 200:
+#                 getinfo_url = "http://127.0.0.1:5000/userinfo"
+#                 response = requests.post(getinfo_url, access_token)
+#                 return redirect(url_for("calendar_page", user_id=user_id))
+#             else:
+#                 print("Erro ao fazer login:", response.text)
+#                 return render_template("login.html")
 
-        else:
-            error_message = "Credenciais inválidas. Por favor, tente novamente."
-            return render_template("login.html", error=error_message)
+#         else:
+#             error_message = "Credenciais inválidas. Por favor, tente novamente."
+#             return render_template("login.html", error=error_message)
 
-    return render_template("login.html")
-
-
-@app.route("/register")
-def register_page():
-    return render_template("register.html")
+#     return render_template("login.html")
 
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    user_id = 1
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
+# @app.route("/register")
+# def register_page():
+#     return render_template("register.html")
 
-        if password != confirm_password:
-            error = "Passwords do not match"
-            return render_template("register.html", error=error)
 
-        connection = psycopg2.connect(
-            dbname=DATABASE, user=USER, password=PASSWORD, host=HOST
-        )
+# @app.route("/register", methods=["GET", "POST"])
+# def register():
+#     user_id = 1
+#     if request.method == "POST":
+#         username = request.form["username"]
+#         password = request.form["password"]
+#         confirm_password = request.form["confirm_password"]
 
-        conn = connection.cursor()
+#         if password != confirm_password:
+#             error = "Passwords do not match"
+#             return render_template("register.html", error=error)
 
-        with open("create_users_table.sql", "r") as file:
-            create_table_query = file.read()
-        conn.execute(create_table_query)
+#         connection = psycopg2.connect(
+#             dbname=DATABASE, user=USER, password=PASSWORD, host=HOST
+#         )
 
-        query = """SELECT * FROM calendars"""
-        conn.execute(query)
-        users = conn.fetchall()
+#         conn = connection.cursor()
 
-        x = False
-        for row in users:
-            if row[1] == username:
-                x = True
-                break
+#         with open("create_users_table.sql", "r") as file:
+#             create_table_query = file.read()
+#         conn.execute(create_table_query)
 
-        if x == True:
-            error = "Username already exists"
-            print(error)
-            return render_template("register.html", error=error)
-        else:
-            data = {"email": "user1@example.com", "name": username, "password": password}
-            # Endpoint de signup do serviço de autenticação
-            signup_url = "http://127.0.0.1:5000/signup"
+#         query = """SELECT * FROM calendars"""
+#         conn.execute(query)
+#         users = conn.fetchall()
 
-            # Realizar uma solicitação POST para o endpoint de signup
-            response = requests.post(signup_url, data=data)
-            # if response.status_code == 200:
-            if True:
-                print("Usuário registrado com sucesso!")
-                a = test_create_schedule()
-                postgres_insert_query = """ INSERT INTO calendars (username, password, date, location, shift, type) VALUES (%s,%s,%s,%s,%s,%s)"""
-                event = "event"
-                shift = "Noite"
-                record_to_insert = (
-                    username,
-                    password,
-                    a["time"],
-                    a["locationId"],
-                    shift,
-                    event,
-                )
-                conn.execute(postgres_insert_query, record_to_insert)
-                connection.commit()
-                count = conn.rowcount
-                # print(count, "Record inserted successfully into mobile table")
-                get_vnf_pkgs()
-                print("deu")
-                return redirect(url_for("calendar_page"))
-            else:
-                print("Erro ao registrar usuário:", response.text)
-                return render_template("register.html")
+#         x = False
+#         for row in users:
+#             if row[1] == username:
+#                 x = True
+#                 break
 
-        return redirect(url_for("calendar_page", user_id=user_id))
+#         if x == True:
+#             error = "Username already exists"
+#             print(error)
+#             return render_template("register.html", error=error)
+#         else:
+#             data = {"email": "user1@example.com", "name": username, "password": password}
+#             # Endpoint de signup do serviço de autenticação
+#             signup_url = "http://127.0.0.1:5000/signup"
 
-    return redirect(url_for("calendar_page"), user_id=user_id)
+#             # Realizar uma solicitação POST para o endpoint de signup
+#             response = requests.post(signup_url, data=data)
+#             # if response.status_code == 200:
+#             if True:
+#                 print("Usuário registrado com sucesso!")
+#                 a = test_create_schedule()
+#                 postgres_insert_query = """ INSERT INTO calendars (username, password, date, location, shift, type) VALUES (%s,%s,%s,%s,%s,%s)"""
+#                 event = "event"
+#                 shift = "Noite"
+#                 record_to_insert = (
+#                     username,
+#                     password,
+#                     a["time"],
+#                     a["locationId"],
+#                     shift,
+#                     event,
+#                 )
+#                 conn.execute(postgres_insert_query, record_to_insert)
+#                 connection.commit()
+#                 count = conn.rowcount
+#                 # print(count, "Record inserted successfully into mobile table")
+#                 get_vnf_pkgs()
+#                 print("deu")
+#                 return redirect(url_for("calendar_page"))
+#             else:
+#                 print("Erro ao registrar usuário:", response.text)
+#                 return render_template("register.html")
+
+#         return redirect(url_for("calendar_page", user_id=user_id))
+
+#     return redirect(url_for("calendar_page"), user_id=user_id)
 
 
 @app.route("/api/v1/vnf_pkgs")

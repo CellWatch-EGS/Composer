@@ -1,0 +1,89 @@
+version: '3.8'
+services:
+  composer_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5000"
+    environment:
+      - APP_NAME=Composer
+      - DATABASE_URL=postgresql://composer:lol123@db/composer
+    depends_on:
+      - composer_db
+    image: registry.deti/cellwatch/composer_api:latest
+
+  composer_db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB: composer # Name of the database
+      POSTGRES_USER: composer # Username for the database
+      POSTGRES_PASSWORD: lol123 # Password for the database user
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  notification_service:
+    ports:
+      - "8002:8000"
+    environment:
+      - APP_NAME=Notification_Service
+    image: registry.deti/cellwatch/notification_service:v2
+
+  auth_api:
+    ports:
+      - "5003:5000"
+    environment:
+      - APP_NAME=Auth
+      - DATABASE_URI=postgresql://admin:admin@auth_db:5432/cellwatch
+    depends_on:
+      - auth_db
+    image: registry.deti/cellwatch/auth_app:v2
+    networks:
+      - backend
+
+  auth_db:
+    ports:
+      - "8001:5432"
+    # em vez de build usa a imagem do dockerhub
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: cellwatch
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  calendar_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5000"
+    environment:
+      - APP_NAME=Calendar
+      - DATABASE_URL=postgresql://calendar_db:lol123@db/calendar
+    depends_on:
+      - calendar_db
+    image: registry.deti/cellwatch/calendar:v1
+
+  calendar_db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_DB_C: calendar # Name of the database
+      POSTGRES_USER_C: calendar # Username for the database
+      POSTGRES_PASSWORD_C: lol123 # Password for the database user
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:
