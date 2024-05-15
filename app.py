@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 from flask_jwt_extended import get_jwt_identity, jwt_required
 import json
+from flask_login import login_required, LoginManager, UserMixin
 import requests
 import psycopg2
 from datetime import datetime
@@ -8,11 +9,14 @@ import uuid
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = "super secret key"
-app.config["SESSION_TYPE"] = "filesystem"
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+app.config["SESSION_TYPE"] = "filesystem"
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_SECRET_KEY'] = "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"
-
 app.config['JWT_COOKIE_CSRF_PROJECT'] = False
 app.config['JWT_ACCESS_COOKIE_NAME'] = ['access_token']
 app.config['JWT_ACCESS_CSRF_HEADER_NAME'] = 'Your_CSRF_Header_Name'
@@ -28,6 +32,15 @@ TOKEN = "8ecadf46-9364-4e3a-b79d-182d6a259a75"
 headers = {"Authorization": f"Bearer {TOKEN}"}
 BASE_URL = "http://127.0.0.1:8000/v1"
 
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+@login_manager.user_loader
+def load_user(user_id):
+    # Aqui você deve implementar a lógica para carregar o usuário do seu banco de dados ou outra fonte de dados
+    # Esta função deve retornar uma instância do usuário com o ID fornecido, ou None se o usuário não for encontrado
+    return User(user_id)
 
 def connect_db():
     conn = psycopg2.connect(dbname=DATABASE, user=USER, password=PASSWORD, host=HOST)
@@ -43,7 +56,8 @@ def connect_db():
 # Rota para a página inicial
 @app.route("/")
 def index():
-    login_url = "http://10.139.1.8:5000/login"
+    # login_url = "http://10.139.1.8:5000/login"
+    login_url = "http://127.0.0.1:8080/"
     # login_url = "http://127.0.0.1:5000/v1/calendar/1"
     # return redirect(url_for('calendar_page'))
 
@@ -73,11 +87,11 @@ def create_schedule():
     return redirect(url_for('calendar_page'))
 
 # <int:user_id>
-@app.route("/v1/calendar/<int:user_id>", methods=["GET", "POST"])
-@jwt_required()
+@app.route("/v1/calendar/2", methods=["GET", "POST"])
+@login_required
 def calendar_page():
     calendar_events = []
-    a = test_get_schedules_by_person_name("jonas")
+    a = test_get_schedules_by_person_name("John Doe")
     print(a)
 
     for x in a: 
