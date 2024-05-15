@@ -13,14 +13,17 @@ app.secret_key = "super secret key"
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+# db.create_all()
 
-app.config["SESSION_TYPE"] = "filesystem"
-app.config['JWT_TOKEN_LOCATION'] = ['cookies']
-app.config['JWT_SECRET_KEY'] = "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"
-app.config['JWT_COOKIE_CSRF_PROJECT'] = False
-app.config['JWT_ACCESS_COOKIE_NAME'] = ['access_token']
-app.config['JWT_ACCESS_CSRF_HEADER_NAME'] = 'Your_CSRF_Header_Name'
-app.config['JWT_ACCESS_CSRF_FIELD_NAME'] = 'Your_CSRF_Field_Name'
+
+
+# app.config["SESSION_TYPE"] = "filesystem"
+# app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+# app.config['JWT_SECRET_KEY'] = "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"
+# app.config['JWT_COOKIE_CSRF_PROJECT'] = False
+# app.config['JWT_ACCESS_COOKIE_NAME'] = ['access_token']
+# app.config['JWT_ACCESS_CSRF_HEADER_NAME'] = 'Your_CSRF_Header_Name'
+# app.config['JWT_ACCESS_CSRF_FIELD_NAME'] = 'Your_CSRF_Field_Name'
 
 
 DATABASE = "mydb" 
@@ -32,15 +35,21 @@ TOKEN = "8ecadf46-9364-4e3a-b79d-182d6a259a75"
 headers = {"Authorization": f"Bearer {TOKEN}"}
 BASE_URL = "http://127.0.0.1:8000/v1"
 
+users = {}
+
 class User(UserMixin):
-    def __init__(self, id):
+    def __init__(self, id, username, password):
         self.id = id
+        self.username = username
+        self.password = password
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Aqui você deve implementar a lógica para carregar o usuário do seu banco de dados ou outra fonte de dados
-    # Esta função deve retornar uma instância do usuário com o ID fornecido, ou None se o usuário não for encontrado
-    return User(user_id)
+    return users.get(user_id)
+
+# Criar um usuário de teste
+user = User(id='2', username='b', password='123')
+users[user.id] = user
 
 def connect_db():
     conn = psycopg2.connect(dbname=DATABASE, user=USER, password=PASSWORD, host=HOST)
@@ -88,26 +97,35 @@ def create_schedule():
 
 # <int:user_id>
 @app.route("/v1/calendar/2", methods=["GET", "POST"])
-@login_required
 def calendar_page():
+    url = "http://127.0.0.1:5000/v1/calendar/2"
+    response = requests.get(url)
+
+    # The cookies are stored in the .cookies attribute of the response
+    cookies = response.cookies
+
+    # You can access a specific cookie by its name
+    access_token = cookies.get('access_token')
+
+    print(access_token)
     calendar_events = []
-    a = test_get_schedules_by_person_name("John Doe")
-    print(a)
+    # a = test_get_schedules_by_person_name("John Doe")
+    # print(a)
 
-    for x in a: 
+    # for x in a: 
                 
-        data_parsed = datetime.strptime(x["time"], "%Y-%m-%dT%H:%M:%S")
-        data_formatada = data_parsed.strftime("%B/%d/%Y")
-        x["time"] = data_formatada
+    #     data_parsed = datetime.strptime(x["time"], "%Y-%m-%dT%H:%M:%S")
+    #     data_formatada = data_parsed.strftime("%B/%d/%Y")
+    #     x["time"] = data_formatada
 
-        event_data = {
-            "id": x["id"],
-            "name": x["locationId"],
-            "date": x["time"],
-            "description": "Tarde",
-            "event": "event",
-        }
-        calendar_events.append(event_data)
+    #     event_data = {
+    #         "id": x["id"],
+    #         "name": x["locationId"],
+    #         "date": x["time"],
+    #         "description": "Tarde",
+    #         "event": "event",
+    #     }
+    #     calendar_events.append(event_data)
 
     return render_template("calendar.html", calendar_events=calendar_events)
 
