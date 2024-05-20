@@ -9,7 +9,7 @@
 # )
 # cursor = conn.cursor()
 
-# # Código SQL para criar a tabela users
+# Código SQL para criar a tabela users
 # create_users_table = """
 # CREATE TABLE IF NOT EXISTS users (
 #     id SERIAL PRIMARY KEY,

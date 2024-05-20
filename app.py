@@ -6,6 +6,8 @@ import requests
 import psycopg2
 from datetime import datetime
 import uuid
+import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = "super secret key"
@@ -98,37 +100,51 @@ def create_schedule():
 # <int:user_id>
 @app.route("/v1/calendar/2", methods=["GET", "POST"])
 def calendar_page():
-    url = "http://127.0.0.1:5000/v1/calendar/2"
-    response = requests.get(url)
-
-    # The cookies are stored in the .cookies attribute of the response
-    cookies = response.cookies
-
-    # You can access a specific cookie by its name
-    access_token = cookies.get('access_token')
-
-    print(access_token)
-    calendar_events = []
-    # a = test_get_schedules_by_person_name("John Doe")
-    # print(a)
-
-    # for x in a: 
-                
-    #     data_parsed = datetime.strptime(x["time"], "%Y-%m-%dT%H:%M:%S")
-    #     data_formatada = data_parsed.strftime("%B/%d/%Y")
-    #     x["time"] = data_formatada
-
-    #     event_data = {
-    #         "id": x["id"],
-    #         "name": x["locationId"],
-    #         "date": x["time"],
-    #         "description": "Tarde",
-    #         "event": "event",
-    #     }
-    #     calendar_events.append(event_data)
-
-    return render_template("calendar.html", calendar_events=calendar_events)
-
+    # Obtenha o valor do cookie 'access_token' da requisição atual
+    access_token = request.cookies.get('access_token')
+    print("accescc_token: " + access_token)
+    
+    if access_token:
+        try:
+            # Tente decodificar o token usando app.secret_key
+            decoded_token = jwt.decode(access_token, options={"verify_signature": False})
+            print("Decoded Token:", decoded_token)
+            
+            # Aqui você pode validar os dados do token, por exemplo, o ID do usuário
+            user_id = decoded_token['sub']
+            print("User ID:", user_id)
+            
+            # Continue com sua lógica de buscar eventos do calendário
+            calendar_events = []
+            
+            # Exemplo de lógica comentada para buscar e processar os eventos do calendário:
+            # a = test_get_schedules_by_person_name("John Doe")
+            # print(a)
+            #
+            # for x in a:
+            #     data_parsed = datetime.strptime(x["time"], "%Y-%m-%dT%H:%M:%S")
+            #     data_formatada = data_parsed.strftime("%B/%d/%Y")
+            #     x["time"] = data_formatada
+            #
+            #     event_data = {
+            #         "id": x["id"],
+            #         "name": x["locationId"],
+            #         "date": x["time"],
+            #         "description": "Tarde",
+            #         "event": "event",
+            #     }
+            #     calendar_events.append(event_data)
+            
+            return render_template("calendar.html", calendar_events=calendar_events)
+        
+        except ExpiredSignatureError:
+            return "Token has expired", 401
+        except InvalidTokenError as e:
+            print(f"Invalid token error: {e}")
+            return "Invalid token", 401
+    else:
+        return "No token provided", 401
+            
 
 def test_get_schedules_by_person_name(person_name):
     url = f"{BASE_URL}/schedules/{person_name}"
