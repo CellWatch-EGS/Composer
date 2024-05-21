@@ -35,7 +35,7 @@ HOST = "localhost"
 
 TOKEN = "8ecadf46-9364-4e3a-b79d-182d6a259a75"
 headers = {"Authorization": f"Bearer {TOKEN}"}
-BASE_URL = "http://127.0.0.1:8000/v1"
+BASE_URL = "http://127.0.0.1:5001/v1"
 
 users = {}
 
@@ -68,7 +68,7 @@ def connect_db():
 @app.route("/")
 def index():
     # login_url = "http://10.139.1.8:5000/login"
-    login_url = "http://127.0.0.1:8080/"
+    login_url = "http://127.0.0.1:8082/"
     # login_url = "http://127.0.0.1:5000/v1/calendar/1"
     # return redirect(url_for('calendar_page'))
 
@@ -98,21 +98,30 @@ def create_schedule():
     return redirect(url_for('calendar_page'))
 
 # <int:user_id>
-@app.route("/v1/calendar/2", methods=["GET", "POST"])
-def calendar_page():
+@app.route("/v1/calendar/<int:user_id>", methods=["GET", "POST"])
+def calendar_page(user_id):
     # Obtenha o valor do cookie 'access_token' da requisição atual
-    access_token = request.cookies.get('access_token')
-    print("accescc_token: " + access_token)
+    # access_token = request.cookies.get('access_token')
+    # # print("accescc_token: " + access_token)
     
-    if access_token:
+    # if access_token:
         try:
-            # Tente decodificar o token usando app.secret_key
-            decoded_token = jwt.decode(access_token, options={"verify_signature": False})
-            print("Decoded Token:", decoded_token)
+            user_data = request.cookies.get('user_data')
+            if user_data:
+                user_data = json.loads(user_data)
+                email = user_data.get('email')
+                username = user_data.get('username')
+                access_token = user_data.get('access_token')
+                # Use the email, username, and access token as needed
+                print(f"Email: {email}, Username: {username}, Access Token: {access_token}")
+
+            # # Tente decodificar o token usando app.secret_key
+            # decoded_token = jwt.decode(access_token, options={"verify_signature": False}, algorithms=["HS256"])
+            # print("Decoded Token:", decoded_token)
             
-            # Aqui você pode validar os dados do token, por exemplo, o ID do usuário
-            user_id = decoded_token['sub']
-            print("User ID:", user_id)
+            # # Aqui você pode validar os dados do token, por exemplo, o ID do usuário
+            # user_id = decoded_token['sub']
+            # print("User ID:", user_id)
             
             # Continue com sua lógica de buscar eventos do calendário
             calendar_events = []
@@ -142,10 +151,9 @@ def calendar_page():
         except InvalidTokenError as e:
             print(f"Invalid token error: {e}")
             return "Invalid token", 401
-    else:
-        return "No token provided", 401
+    # else:
+    #     return "No token provided", 401
             
-
 def test_get_schedules_by_person_name(person_name):
     url = f"{BASE_URL}/schedules/{person_name}"
     response = requests.get(url, headers=headers)
@@ -340,6 +348,6 @@ def get_vnf_pkgs():
 
 
 if __name__ == "__main__":
-    porta = 5000
+    porta = 5001
     # Execute o aplicativo Flask na porta especificada
     app.run(debug=True, port=porta)
