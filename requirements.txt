@@ -3,3 +3,4 @@ Flask_JWT_Extended==4.5.3
 psycopg2_binary==2.9.9
 Requests==2.31.0
 Werkzeug==2.2.2
+flask-login

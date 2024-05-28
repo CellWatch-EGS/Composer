@@ -79,7 +79,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      - "5434:5434"
+    networks:
+      - networkName
 
 networks:
   backend:

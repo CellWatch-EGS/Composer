@@ -8,13 +8,117 @@
     <link rel="stylesheet" href="../../static/css/style.css">
     <link rel="stylesheet" href="../../static/css/evo-calendar.midnight-blue.min.css">
     <link rel="stylesheet" href="../../static/css/evo-calendar.min.css">
+    <style>
+        /* Estilos para o pop-up */
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
 
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .popup input {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        .button-container {
+            margin-bottom: 20px;
+        }
+
+        .button-container button {
+            margin-right: 10px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .button-container button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 
 <body>
     <div class="hero">
+        <div class="button-container">
+            <button id="add-schedule-btn">Add Schedule</button>
+        </div>
         <div id="calendar"></div>
     </div>
+
+    <!-- Pop-up Overlay -->
+    <div class="popup-overlay" id="popup-overlay"></div>
+
+    <!-- Pop-up Form -->
+    <div class="popup" id="popup">
+        <span class="close-btn" id="close-btn">&times;</span>
+        <h3>Add New Schedule</h3>
+        <form id="schedule-form">
+            <label for="time">Time:</label>
+            <input type="text" id="time" name="time" class="datetimepicker">
+            <label for="location">Location:</label>
+            <input type="text" id="location" name="location">
+            <label for="shift">Shift:</label>
+            <input type="text" id="shift" name="shift">
+            <button type="submit">Add</button>
+            <button type="button" id="back-btn">Back</button>
+        </form>
+    </div>
+
+    <!-- Inclua o arquivo CSS do DateTimePicker -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">
+
+    <!-- Inclua o arquivo JavaScript do DateTimePicker -->
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.full.min.js"></script>
+
+    <script>
+        // Inicialize o DateTimePicker
+        $(document).ready(function () {
+            $('.datetimepicker').datetimepicker({
+                format: 'Y-m-d H:i', // Formato da data e hora
+                step: 15, // Incremento de tempo (15 minutos)
+                allowTimes: [ // Horas permitidas
+                    '08:00', '08:15', '08:30', '08:45',
+                    '09:00', '09:15', '09:30', '09:45',
+                    // Adicione mais horas conforme necessário
+                ],
+                minDate: 0, // Data mínima (hoje)
+                maxDate: '+1Y' // Data máxima (um ano a partir de hoje)
+            });
+        });
+    </script>
+
+
 
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
     <script src="../../static/js/evo-calendar.min.js"></script>
@@ -25,7 +129,7 @@
                 theme: "Midnight Blue",
                 calendarEvents: [
                     {% for event in calendar_events %}
-                {
+                    {
                     id: '{{ event.id | safe }}',
                     name: '{{ event.name | safe }}',
                     date: '{{ event.date | safe }}',
@@ -33,11 +137,61 @@
                     type: '{{ event.type | safe }}'
                 },
                 {% endfor %}
-            ]
-        })
-    })
-    </script>
+                ]
+            });
 
+        // Show popup
+        $('#add-schedule-btn').on('click', function () {
+            $('#popup-overlay').show();
+            $('#popup').show();
+        });
+
+        // Hide popup
+        $('#popup-overlay, #close-btn, #back-btn').on('click', function () {
+            $('#popup-overlay').hide();
+            $('#popup').hide();
+        });
+
+        // Handle form submission
+        $('#schedule-form').on('submit', function (e) {
+            e.preventDefault();
+
+            var time = $('#time').val();
+            var location = $('#location').val();
+            var shift = $('#shift').val();
+
+            $.ajax({
+                // Não é necessário especificar a URL, pois estamos apenas recarregando a página
+                // url:'create_schedule',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    time: time,
+                    location: location,
+                    shift: shift
+                }),
+                success: function (response) {
+                    // alert('Schedule added successfully');
+                    // Recarrega a página para ver o novo agendamento
+                    window.location.reload();
+                },
+                error: function (error) {
+                    // alert('Error adding schedule');
+                }
+            });
+
+
+            $('#popup-overlay').hide();
+            $('#popup').hide();
+        });
+
+        // Back button behavior
+        $('#back-btn').on('click', function () {
+            $('#popup-overlay').hide();
+            $('#popup').hide();
+        });
+});
+    </script>
 
 </body>
 

@@ -1,0 +1,493 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: composer-api
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: composer-api
+  template:
+    metadata:
+      labels:
+        app: composer-api
+    spec:
+      containers:
+      - name: composer-api
+        image: registry.deti/egs-cellwatch/composer_api:v6
+        env:
+        - name: DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret
+              key: composer_url
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-service
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-service
+  template:
+    metadata:
+      labels:
+        app: calendar-service
+    spec:
+      containers:
+      - name: calendar-service
+        image: registry.deti/egs-cellwatch/calendar_api:v8
+        env:
+        - name: DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret
+              key: database-url
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: registry.deti/egs-cellwatch/notification_service:v4
+        env:
+        - name: DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret
+              key: sqlalchemy_database_uri
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8500
+---
+# Create app deployment for auth service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentication-service
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authentication-service
+  template:
+    metadata:
+      labels:
+        app: authentication-service
+    spec:
+      containers:
+      - name: authentication-service
+        image: registry.deti/egs-cellwatch/authentication-service:v9
+        env:
+        - name: DATABASE_URI
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret
+              key: sqlalchemy_database_uri
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8081
+
+#Create nginx deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - image: registry.deti/egs-cellwatch/nginx:v2
+          name: nginx
+          ports:
+            - containerPort: 80
+          resources: {}
+      restartPolicy: Always
+
+# Create db deployment 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-db
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-db
+  template:
+    metadata:
+      labels:
+        app: auth-db
+    spec:
+      containers:
+      - name: auth-db
+        image: postgres:13.2-alpine
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret  # replace with the name of your Secret
+              key: POSTGRES_PASSWORD  # replace with the key in your Secret
+          
+        volumeMounts:
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"   
+            cpu: "250m"       
+          limits:
+            memory: "1Gi"     
+            cpu: "500m"       
+        ports:
+        - containerPort: 5432
+      volumes:
+      - name: init-script
+        configMap:
+          name: postgres-init-script
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: composer-db
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: composer-db
+  template:
+    metadata:
+      labels:
+        app: composer-db
+    spec:
+      containers:
+      - name: composer-db
+        image: postgres:13.2-alpine
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret  # replace with the name of your Secret
+              key: composer_postgres_SUPER_PASSWORD_SECRET  # replace with the key in your Secret
+          
+        volumeMounts:
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"   
+            cpu: "250m"       
+          limits:
+            memory: "1Gi"     
+            cpu: "500m"       
+        ports:
+        - containerPort: 5433
+      volumes:
+      - name: init-script
+        configMap:
+          name: postgres-init-script-composer
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-db
+  namespace: egs-cellwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-db
+  template:
+    metadata:
+      labels:
+        app: calendar-db
+    spec:
+      containers:
+      - name: calendar-db
+        image: postgres:13.2-alpine
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-uri-secret  # replace with the name of your Secret
+              key: POSTGRES_PASSWORD_SUPER_SECRET  # replace with the key in your Secret
+          
+        volumeMounts:
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"   
+            cpu: "250m"       
+          limits:
+            memory: "1Gi"     
+            cpu: "500m"       
+        ports:
+        - containerPort: 5434
+      volumes:
+      - name: init-script
+        configMap:
+          name: postgres-init-script-calendar
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-db
+  namespace: egs-cellwatch
+spec:
+  selector:
+    app: auth-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+    
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: calendar-db
+  namespace: egs-cellwatch
+spec:
+  selector:
+    app: calendar-db
+  ports:
+    - protocol: TCP
+      port: 5434
+      targetPort: 5434
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: composer-db
+  namespace: egs-cellwatch
+spec:
+  selector:
+    app: composer-db
+  ports:
+    - protocol: TCP
+      port: 5433
+      targetPort: 5433
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-uri-secret
+  namespace: egs-cellwatch
+type: Opaque
+data:
+# auth
+  sqlalchemy_database_uri: cG9zdGdyZXNxbDovL2FkbWluOmFkbWluQGF1dGgtZGIvY2VsbHdhdGNo
+  POSTGRES_PASSWORD: YWRtaW4=
+  # calendar
+  database-url: cG9zdGdyZXNxbDovL2NhbGVuZGFyOnBhc3N3b3JkMTIzQGRiL2NhbGVuZGFy
+  POSTGRES_PASSWORD_SUPER_SECRET: cGFzc3dvcmQxMjM=
+  # compoeser
+  composer_url: cG9zdGdyZXNxbDovL2NvbXBvc2VyOmxvbDEyM0BkYi9jb21wb3Nlcg==
+  composer_postgres_SUPER_PASSWORD_SECRET: bG9sMTIz
+# Create Service for auth_app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentication-service
+  namespace: egs-cellwatch
+spec:
+  ports:
+  - port: 8081
+    targetPort: 8081
+  selector:
+    app: authentication-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calendar-service
+  namespace: egs-cellwatch
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: calendar-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: egs-cellwatch
+spec:
+  ports:
+  - port: 8500
+    targetPort: 8500
+  selector:
+    app: notification-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: composer-api
+  namespace: egs-cellwatch
+spec:
+  ports:
+  - port: 5001
+    targetPort: 5001
+  selector:
+    app: composer-api
+
+# Create Service for nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: egs-cellwatch
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+
+# Configure Traefik
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cellwatch-egs
+  namespace: egs-cellwatch
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/frontend-entry-points: http,https
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    traefik.ingress.kubernetes.io/redirect-permanentyy: "true"
+spec:
+  rules:
+  - host: egs-cellwatch.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service
+            port: 
+              number: 80
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: egs-cellwatch
+data:
+  init.sql: |
+    CREATE DATABASE cellwatch;
+
+    CREATE USER admin WITH PASSWORD 'admin';
+
+    GRANT ALL PRIVILEGES ON DATABASE cellwatch TO admin;
+
+---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: postgres-init-script-calendar
+#   namespace: egs-cellwatch
+# data:
+#   init.sql: |
+#     CREATE DATABASE calendar;
+
+#     CREATE USER calendar WITH PASSWORD 'password123';
+
+#     GRANT ALL PRIVILEGES ON DATABASE calendar TO calendar;
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script-composer
+  namespace: egs-cellwatch
+data:
+  init.sql: |
+    CREATE DATABASE composer;
+
+    CREATE USER composer WITH PASSWORD 'lol123';
+
+    GRANT ALL PRIVILEGES ON DATABASE composer TO composer;
+
+    
+
+
+
