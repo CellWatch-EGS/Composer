@@ -11,7 +11,7 @@ services:
       - DATABASE_URL=postgresql://composer:lol123@db/composer
     depends_on:
       - composer_db
-    image: registry.deti/cellwatch/composer_api:latest
+    image: registry.deti/cellwatch/composer-api:v10
 
   composer_db:
     image: postgres:13-alpine
@@ -29,7 +29,7 @@ services:
       - "8002:8000"
     environment:
       - APP_NAME=Notification_Service
-    image: registry.deti/cellwatch/notification_service:v2
+    image: registry.deti/cellwatch/notification-service:v2
 
   auth_api:
     ports:
@@ -68,7 +68,7 @@ services:
       - DATABASE_URL=postgresql://calendar_db:lol123@db/calendar
     depends_on:
       - calendar_db
-    image: registry.deti/cellwatch/calendar:v1
+    image: registry.deti/egs-cellwatch/calendar:v1
 
   calendar_db:
     image: postgres:13-alpine

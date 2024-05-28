@@ -34,7 +34,7 @@ HOST = "localhost"
 
 TOKEN = "8ecadf46-9364-4e3a-b79d-182d6a259a75"
 headers = {"Authorization": f"Bearer {TOKEN}"}
-BASE_URL = "http://127.0.0.1:8000/v1"
+BASE_URL = "http://calendar:8000/v1"
 
 users = {}
 
@@ -67,7 +67,7 @@ def connect_db():
 @app.route("/composer")
 def index():
     # login_url = "http://10.139.1.8:5000/login"
-    login_url = "http://127.0.0.1:8082/"
+    login_url = "http://egs-cellwatch.com/authentication"
     # login_url = "http://127.0.0.1:5000/v1/calendar/1"
     # return redirect(url_for('calendar_page'))
 
@@ -185,6 +185,7 @@ def calendar_page(user_id):
                 calendar_events = []
                 # a = test_create_schedule()
                 postgres_insert_query = """ INSERT INTO calendars (username, date, location, shift, type, email) VALUES (%s,%s,%s,%s,%s, %s)"""
+
                 # event = "event"
                 # shift = "Noite"
                 # record_to_insert = (
@@ -194,6 +195,7 @@ def calendar_page(user_id):
                 #     shift,
                 #     event,
                 # )
+
                 record_to_insert = (username, None, None, None, None, email)
                 conn.execute(postgres_insert_query, record_to_insert)
                 connection.commit()
@@ -248,7 +250,7 @@ def get_vnf_pkgs(username, email):
             },
         }
         response = requests.post(
-            "http://127.0.0.1:8005/api/v1/notifications", json=notification_data
+            "http://cellwatch.deti/notification:8500/api/v1/notifications", json=notification_data
         )
         response.raise_for_status()  # Raise an exception for HTTP errors
         return jsonify(response.json())

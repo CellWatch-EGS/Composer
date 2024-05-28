@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: composer-api
-        image: registry.deti/egs-cellwatch/composer_api:v6
+        image: registry.deti/egs-cellwatch/composer-api:v18
         env:
         - name: DATABASE_URI
           valueFrom:
@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
       - name: calendar-service
-        image: registry.deti/egs-cellwatch/calendar_api:v8
+        image: registry.deti/egs-cellwatch/calendar-service:v10
         env:
         - name: DATABASE_URI
           valueFrom:
@@ -83,7 +83,7 @@ spec:
     spec:
       containers:
       - name: notification-service
-        image: registry.deti/egs-cellwatch/notification_service:v4
+        image: registry.deti/egs-cellwatch/notification-service:v4
         env:
         - name: DATABASE_URI
           valueFrom:
@@ -133,7 +133,7 @@ spec:
             memory: "128Mi"
             cpu: "500m"
         ports:
-        - containerPort: 8081
+        - containerPort: 8080
 
 #Create nginx deployment
 ---
@@ -362,8 +362,8 @@ metadata:
   namespace: egs-cellwatch
 spec:
   ports:
-  - port: 8081
-    targetPort: 8081
+  - port: 8080
+    targetPort: 8080
   selector:
     app: authentication-service
 
