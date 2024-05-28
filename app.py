@@ -34,7 +34,7 @@ HOST = "localhost"
 
 TOKEN = "8ecadf46-9364-4e3a-b79d-182d6a259a75"
 headers = {"Authorization": f"Bearer {TOKEN}"}
-BASE_URL = "http://calendar:8000/v1"
+BASE_URL = "http:/grupo8-egs-deti.ua.pt/calendar/v1"
 
 users = {}
 
@@ -67,7 +67,7 @@ def connect_db():
 @app.route("/composer")
 def index():
     # login_url = "http://10.139.1.8:5000/login"
-    login_url = "http://egs-cellwatch.com/authentication"
+    login_url = "http://grupo8-egs-deti.ua.pt/authentication"
     # login_url = "http://127.0.0.1:5000/v1/calendar/1"
     # return redirect(url_for('calendar_page'))
 

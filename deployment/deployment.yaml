@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: composer-api
-        image: registry.deti/egs-cellwatch/composer-api:v18
+        image: registry.deti/egs-cellwatch/composer-api:v23
         env:
         - name: DATABASE_URI
           valueFrom:
@@ -204,7 +204,6 @@ spec:
       - name: init-script
         configMap:
           name: postgres-init-script
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -247,9 +246,7 @@ spec:
       - name: init-script
         configMap:
           name: postgres-init-script-composer
-
 ---
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -434,7 +431,7 @@ metadata:
     traefik.ingress.kubernetes.io/redirect-permanentyy: "true"
 spec:
   rules:
-  - host: egs-cellwatch.com
+  - host: grupo8-egs-deti.ua.pt
     http:
       paths:
       - path: /
